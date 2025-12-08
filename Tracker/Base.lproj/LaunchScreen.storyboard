@@ -13,7 +13,19 @@
                     <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                        <color key="backgroundColor" xcode11CocoaTouchSystemColor="systemBackgroundColor" cocoaTouchSystemColor="whiteColor"/>
+                        <subviews>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="Logo" translatesAutoresizingMaskIntoConstraints="NO" id="QDd-9h-fb5">
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="91" id="4Pn-bK-gA8"/>
+                                    <constraint firstAttribute="height" constant="94" id="h5v-6n-GiQ"/>
+                                </constraints>
+                            </imageView>
+                        </subviews>
+                        <color key="backgroundColor" red="0.27500000596046448" green="0.44300001859664917" blue="0.87099999189376831" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                        <constraints>
+                            <constraint firstItem="QDd-9h-fb5" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="A8G-8Q-3o4"/>
+                            <constraint firstItem="QDd-9h-fb5" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="dlv-3U-dpi"/>
+                        </constraints>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                     </view>
                 </viewController>
@@ -22,4 +34,7 @@
             <point key="canvasLocation" x="53" y="375"/>
         </scene>
     </scenes>
+    <resources>
+        <image name="Logo" width="91" height="94"/>
+    </resources>
 </document>
