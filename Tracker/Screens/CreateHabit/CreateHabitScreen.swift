@@ -15,22 +15,47 @@ final class CreateHabitScreen: UIViewController {
         label.text = "Новая привычка"
         label.font = UIFont.systemFont(ofSize: 16, weight: .medium)
         label.textAlignment = .center
+        
+        // Настройка line-height согласно макету
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.minimumLineHeight = 22
+        paragraphStyle.maximumLineHeight = 22
+        paragraphStyle.alignment = .center
+        
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 16, weight: .medium),
+            .paragraphStyle: paragraphStyle
+        ]
+        label.attributedText = NSAttributedString(string: "Новая привычка", attributes: attributes)
+        
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
     
-    private lazy var textField: UITextField = {
-        let textField = UITextField()
-        textField.placeholder = "Введите название трекера"
-        textField.layer.cornerRadius = 16
-        textField.backgroundColor = UIColor(red: 230/255, green: 232/255, blue: 235/255, alpha: 0.3)
-        textField.translatesAutoresizingMaskIntoConstraints = false
+    private lazy var textField: UITextView = {
+        let textView = UITextView()
+        textView.text = ""
+        textView.font = UIFont.systemFont(ofSize: 17)
+        textView.layer.cornerRadius = 16
+        textView.backgroundColor = UIColor(red: 230/255, green: 232/255, blue: 235/255, alpha: 0.3)
+        textView.translatesAutoresizingMaskIntoConstraints = false
+        textView.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 40)
+        textView.textContainer.lineFragmentPadding = 0
+        textView.isScrollEnabled = false
+        textView.textContainer.maximumNumberOfLines = 2
+        textView.textContainer.lineBreakMode = .byWordWrapping
+        textView.textColor = .black
         
-        let leftPaddingView = UIView(frame: CGRect(x: 0, y: 0, width: 16, height: textField.frame.height))
-        textField.leftView = leftPaddingView
-        textField.leftViewMode = .always
-        
-        return textField
+        return textView
+    }()
+    
+    private lazy var placeholderLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Введите название трекера"
+        label.font = UIFont.systemFont(ofSize: 17)
+        label.textColor = .placeholderText
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
     }()
     
     private lazy var clearTextButton: UIButton = {
@@ -44,12 +69,26 @@ final class CreateHabitScreen: UIViewController {
     
     private lazy var errorLabel: UILabel = {
         let label = UILabel()
-        label.text = "Ограничение 38 символов"
-        label.font = UIFont.systemFont(ofSize: 17)
-        label.textColor = .yRed
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.numberOfLines = 1
         label.textAlignment = .center
         label.alpha = 0
-        label.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Настройка текста с точными параметрами из макета
+        let text = "Ограничение 38 символов"
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.minimumLineHeight = 22
+        paragraphStyle.maximumLineHeight = 22
+        paragraphStyle.alignment = .center
+        
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+            .foregroundColor: UIColor(red: 245/255, green: 107/255, blue: 108/255, alpha: 1), // #F56B6C
+            .paragraphStyle: paragraphStyle
+        ]
+        
+        label.attributedText = NSAttributedString(string: text, attributes: attributes)
+        
         return label
     } ()
     
@@ -102,6 +141,11 @@ final class CreateHabitScreen: UIViewController {
         super.viewDidLoad()
         setupUI()
         updateCreateButtonState()
+        updatePlaceholderVisibility()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     // MARK: - Setup
@@ -114,6 +158,7 @@ final class CreateHabitScreen: UIViewController {
         
         view.addSubview(nameScreen)
         view.addSubview(textField)
+        view.addSubview(placeholderLabel)
         view.addSubview(optionsTableView)
         view.addSubview(cancelButton)
         view.addSubview(createButton)
@@ -123,9 +168,12 @@ final class CreateHabitScreen: UIViewController {
         optionsTableView.delegate = self
         optionsTableView.dataSource = self
         
-        textField.addAction(UIAction { [weak self] _ in
-            self?.handleTextFieldChange()
-        }, for: .editingChanged)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(textViewDidChange),
+            name: UITextView.textDidChangeNotification,
+            object: textField
+        )
         
         clearTextButton.addAction(UIAction { [weak self] _ in
             self?.clearTextField()
@@ -140,13 +188,17 @@ final class CreateHabitScreen: UIViewController {
         NSLayoutConstraint.activate([
             
             nameScreen.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            nameScreen.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            nameScreen.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 27),
             nameScreen.heightAnchor.constraint(equalToConstant: 22),
             
             textField.topAnchor.constraint(equalTo: nameScreen.bottomAnchor, constant: 38),
             textField.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
             textField.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
             textField.heightAnchor.constraint(equalToConstant: 75),
+            
+            placeholderLabel.topAnchor.constraint(equalTo: textField.topAnchor, constant: 16),
+            placeholderLabel.leadingAnchor.constraint(equalTo: textField.leadingAnchor, constant: 16),
+            placeholderLabel.trailingAnchor.constraint(equalTo: textField.trailingAnchor, constant: -40),
             
             clearTextButton.centerYAnchor.constraint(equalTo: textField.centerYAnchor),
             clearTextButton.trailingAnchor.constraint(equalTo: textField.trailingAnchor, constant: -16),
@@ -155,8 +207,10 @@ final class CreateHabitScreen: UIViewController {
             
             errorLabel.topAnchor.constraint(equalTo: textField.bottomAnchor, constant: 8),
             errorLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            errorLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 286),
+            errorLabel.heightAnchor.constraint(equalToConstant: 22),
             
-            optionsTableView.topAnchor.constraint(equalTo: textField.bottomAnchor, constant: 24),
+            optionsTableView.topAnchor.constraint(equalTo: errorLabel.bottomAnchor, constant: 8),
             optionsTableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
             optionsTableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
             optionsTableView.heightAnchor.constraint(equalToConstant: 150),
@@ -194,7 +248,15 @@ final class CreateHabitScreen: UIViewController {
         presentingViewController?.dismiss(animated: true)
     }
     
+    @objc private func textViewDidChange() {
+        updatePlaceholderVisibility()
+        updateCreateButtonState()
+        updateClearButtonVisibility()
+        validateTextLength()
+    }
+    
     private func handleTextFieldChange() {
+        updatePlaceholderVisibility()
         updateCreateButtonState()
         updateClearButtonVisibility()
         validateTextLength()
@@ -204,6 +266,10 @@ final class CreateHabitScreen: UIViewController {
         textField.text = ""
         handleTextFieldChange()
         textField.becomeFirstResponder()
+    }
+    
+    private func updatePlaceholderVisibility() {
+        placeholderLabel.isHidden = !(textField.text?.isEmpty ?? true)
     }
     
     private func updateClearButtonVisibility() {
@@ -338,10 +404,13 @@ extension CreateHabitScreen: ScheduleSelectionDelegate {
     }
 }
 
-extension CreateHabitScreen: UITextFieldDelegate {
+extension CreateHabitScreen: UITextViewDelegate {
     
-    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        textField.resignFirstResponder()
+    func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        if text == "\n" {
+            textView.resignFirstResponder()
+            return false
+        }
         return true
     }
     
