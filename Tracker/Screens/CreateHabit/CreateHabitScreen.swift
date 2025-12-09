@@ -8,7 +8,19 @@ final class CreateHabitScreen: UIViewController {
     private var selectedCategory: String?
     private var selectedSchedule: [Weekday] = []
     
+    // Constraints для адаптации позиции таблицы при появлении ошибки
+    private var messageHeightConstraint: NSLayoutConstraint?
+    private var optionsTopConstraint: NSLayoutConstraint?
+    
     // MARK: - UI Elements
+    
+    private lazy var textFieldContainer: UIView = {
+        let container = UIView()
+        container.layer.cornerRadius = 16
+        container.backgroundColor = UIColor(red: 230/255, green: 232/255, blue: 235/255, alpha: 0.3)
+        container.translatesAutoresizingMaskIntoConstraints = false
+        return container
+    }()
     
     private lazy var nameScreen: UILabel = {
         let label = UILabel()
@@ -36,15 +48,24 @@ final class CreateHabitScreen: UIViewController {
         let textView = UITextView()
         textView.text = ""
         textView.font = UIFont.systemFont(ofSize: 17)
-        textView.layer.cornerRadius = 16
-        textView.backgroundColor = UIColor(red: 230/255, green: 232/255, blue: 235/255, alpha: 0.3)
+        textView.backgroundColor = .clear
         textView.translatesAutoresizingMaskIntoConstraints = false
-        textView.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 40)
+        // Вертикальное центрирование: первая строка по центру контейнера (75px)
+        // Высота строки ~22px, контейнер 75px
+        // Для одной строки по центру: top = (75 - 22) / 2 = 26.5px
+        // При появлении второй строки она будет ниже первой
+        textView.textContainerInset = UIEdgeInsets(top: 26.5, left: 16, bottom: 5, right: 50)
         textView.textContainer.lineFragmentPadding = 0
         textView.isScrollEnabled = false
         textView.textContainer.maximumNumberOfLines = 2
         textView.textContainer.lineBreakMode = .byWordWrapping
+        textView.textContainer.widthTracksTextView = true
+        textView.textContainer.heightTracksTextView = true
         textView.textColor = .black
+        textView.textAlignment = .left
+        // Отключаем автоматическую корректировку контента
+        textView.contentInsetAdjustmentBehavior = .never
+        textView.layoutManager.usesFontLeading = false
         
         return textView
     }()
@@ -144,6 +165,12 @@ final class CreateHabitScreen: UIViewController {
         updatePlaceholderVisibility()
     }
     
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // Принудительно сбрасываем contentOffset после layout чтобы текст всегда был виден
+        textField.contentOffset = .zero
+    }
+    
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
@@ -157,20 +184,21 @@ final class CreateHabitScreen: UIViewController {
         textField.delegate = self
         
         view.addSubview(nameScreen)
-        view.addSubview(textField)
-        view.addSubview(placeholderLabel)
+        view.addSubview(textFieldContainer)
+        textFieldContainer.addSubview(textField)
+        textFieldContainer.addSubview(placeholderLabel)
+        textFieldContainer.addSubview(clearTextButton)
+        textFieldContainer.addSubview(errorLabel)
         view.addSubview(optionsTableView)
         view.addSubview(cancelButton)
         view.addSubview(createButton)
-        view.addSubview(clearTextButton)
-        view.addSubview(errorLabel)
         
         optionsTableView.delegate = self
         optionsTableView.dataSource = self
         
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(textViewDidChange),
+            selector: #selector(handleTextViewChange),
             name: UITextView.textDidChangeNotification,
             object: textField
         )
@@ -185,34 +213,51 @@ final class CreateHabitScreen: UIViewController {
     
     private func setupConstraints() {
         
+        // Высота сообщения об ошибке (динамически меняется)
+        messageHeightConstraint = errorLabel.heightAnchor.constraint(equalToConstant: 0)
+        messageHeightConstraint?.isActive = true
+        
+        // Позиция таблицы относительно ошибки (динамически меняется)
+        optionsTopConstraint = optionsTableView.topAnchor.constraint(equalTo: textFieldContainer.bottomAnchor, constant: 32)
+        optionsTopConstraint?.isActive = true
+        
         NSLayoutConstraint.activate([
             
             nameScreen.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             nameScreen.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 27),
             nameScreen.heightAnchor.constraint(equalToConstant: 22),
             
-            textField.topAnchor.constraint(equalTo: nameScreen.bottomAnchor, constant: 38),
-            textField.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            textField.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
-            textField.heightAnchor.constraint(equalToConstant: 75),
+            // Контейнер для текстового поля: позиционируется относительно заголовка, высота 75px как в примере
+            textFieldContainer.topAnchor.constraint(equalTo: nameScreen.bottomAnchor, constant: 38),
+            textFieldContainer.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            textFieldContainer.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            textFieldContainer.heightAnchor.constraint(equalToConstant: 75),
             
-            placeholderLabel.topAnchor.constraint(equalTo: textField.topAnchor, constant: 16),
-            placeholderLabel.leadingAnchor.constraint(equalTo: textField.leadingAnchor, constant: 16),
-            placeholderLabel.trailingAnchor.constraint(equalTo: textField.trailingAnchor, constant: -40),
+            // UITextView занимает всю высоту контейнера
+            textField.topAnchor.constraint(equalTo: textFieldContainer.topAnchor),
+            textField.leadingAnchor.constraint(equalTo: textFieldContainer.leadingAnchor),
+            textField.trailingAnchor.constraint(equalTo: textFieldContainer.trailingAnchor),
+            textField.bottomAnchor.constraint(equalTo: textFieldContainer.bottomAnchor),
             
-            clearTextButton.centerYAnchor.constraint(equalTo: textField.centerYAnchor),
-            clearTextButton.trailingAnchor.constraint(equalTo: textField.trailingAnchor, constant: -16),
+            // Placeholder на уровне первой строки текста (на уровне крестика)
+            placeholderLabel.centerYAnchor.constraint(equalTo: textFieldContainer.centerYAnchor),
+            placeholderLabel.leadingAnchor.constraint(equalTo: textFieldContainer.leadingAnchor, constant: 16),
+            placeholderLabel.trailingAnchor.constraint(equalTo: textFieldContainer.trailingAnchor, constant: -50),
+            
+            // Кнопка очистки по центру контейнера по вертикали
+            clearTextButton.centerYAnchor.constraint(equalTo: textFieldContainer.centerYAnchor),
+            clearTextButton.trailingAnchor.constraint(equalTo: textFieldContainer.trailingAnchor, constant: -16),
             clearTextButton.widthAnchor.constraint(equalToConstant: 17),
             clearTextButton.heightAnchor.constraint(equalToConstant: 17),
             
-            errorLabel.topAnchor.constraint(equalTo: textField.bottomAnchor, constant: 8),
-            errorLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            errorLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 286),
-            errorLabel.heightAnchor.constraint(equalToConstant: 22),
+            // Ошибка позиционируется относительно контейнера (как в примере)
+            errorLabel.centerXAnchor.constraint(equalTo: textFieldContainer.centerXAnchor),
+            errorLabel.topAnchor.constraint(equalTo: textFieldContainer.bottomAnchor, constant: 8),
+            errorLabel.widthAnchor.constraint(equalToConstant: 286),
             
-            optionsTableView.topAnchor.constraint(equalTo: errorLabel.bottomAnchor, constant: 8),
-            optionsTableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            optionsTableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            // Таблица позиционируется относительно ошибки
+            optionsTableView.leadingAnchor.constraint(equalTo: textFieldContainer.leadingAnchor),
+            optionsTableView.trailingAnchor.constraint(equalTo: textFieldContainer.trailingAnchor),
             optionsTableView.heightAnchor.constraint(equalToConstant: 150),
             
             cancelButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
@@ -242,13 +287,15 @@ final class CreateHabitScreen: UIViewController {
             title: name,
             color: .systemBlue,
             schedule: selectedSchedule,
-            emoji: "⭐️"
+            emoji: "😪"
         )
         delegate?.didCreateTracker(newTracker, categoryTitle: category)
         presentingViewController?.dismiss(animated: true)
     }
     
-    @objc private func textViewDidChange() {
+    @objc private func handleTextViewChange() {
+        // Важно: сбрасываем contentOffset чтобы текст всегда был виден
+        textField.contentOffset = .zero
         updatePlaceholderVisibility()
         updateCreateButtonState()
         updateClearButtonVisibility()
@@ -285,13 +332,22 @@ final class CreateHabitScreen: UIViewController {
             let index = text.index(text.startIndex, offsetBy: 38)
             textField.text = String(text[..<index])
             
-            UIView.animate(withDuration: 0.2) {
+            // Показываем ошибку и меняем constraints: опускаем таблицу на 38px вниз
+            messageHeightConstraint?.constant = 22
+            optionsTopConstraint?.constant = 32 + 38  // 70px от textFieldContainer.bottomAnchor
+            
+            UIView.animate(withDuration: 0.3) {
                 self.errorLabel.alpha = 1
+                self.view.layoutIfNeeded()
             }
         } else {
+            // Скрываем ошибку и меняем constraints (как в примере)
+            messageHeightConstraint?.constant = 0
+            optionsTopConstraint?.constant = 32
+            
             UIView.animate(withDuration: 0.3) {
                 self.errorLabel.alpha = 0
-                self.textField.backgroundColor = UIColor(red: 230/255, green: 232/255, blue: 235/255, alpha: 0.3)
+                self.view.layoutIfNeeded()
             }
         }
     }
@@ -412,6 +468,20 @@ extension CreateHabitScreen: UITextViewDelegate {
             return false
         }
         return true
+    }
+    
+    func textViewDidChange(_ textView: UITextView) {
+        // Важно: принудительно сбрасываем contentOffset чтобы текст всегда был виден
+        DispatchQueue.main.async { [weak self] in
+            self?.textField.contentOffset = .zero
+        }
+    }
+    
+    func textViewDidBeginEditing(_ textView: UITextView) {
+        // При начале редактирования также сбрасываем offset
+        DispatchQueue.main.async { [weak self] in
+            self?.textField.contentOffset = .zero
+        }
     }
     
 }

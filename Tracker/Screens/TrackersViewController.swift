@@ -292,7 +292,15 @@ final class TrackersViewController: UIViewController {
                 TrackerCategory(title: "категория тест", trackers: [])
             ]
         } else {
-            categories = savedCategories
+            // Удаляем трекеры с названиями "О" и "И"
+            categories = savedCategories.map { category in
+                let filteredTrackers = category.trackers.filter { tracker in
+                    tracker.title != "О" && tracker.title != "И"
+                }
+                return TrackerCategory(title: category.title, trackers: filteredTrackers)
+            }
+            // Сохраняем изменения после удаления
+            storage.saveCategories(categories)
         }
         
         completedTrackers = savedCompletedTrackers
@@ -359,9 +367,8 @@ extension TrackersViewController: UICollectionViewDataSource {
 // MARK: - UICollectionViewDelegateFlowLayout
 extension TrackersViewController: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        let availableWidth = collectionView.frame.width - 9
-        let cellWidth = availableWidth / 2
-        return CGSize(width: cellWidth, height: 148)
+        // Размер карточки: width: 167, height: 148
+        return CGSize(width: 167, height: 148)
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumInteritemSpacingForSectionAt section: Int) -> CGFloat {
