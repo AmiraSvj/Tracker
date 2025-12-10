@@ -46,11 +46,15 @@ final class TrackerRecordStore: NSObject {
             let calendar = Calendar.current
             let normalizedDate = calendar.startOfDay(for: record.date)
             
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: normalizedDate) else {
+                return
+            }
+            
             fetchRequest.predicate = NSPredicate(
                 format: "trackerId == %@ AND date >= %@ AND date < %@",
                 record.trackerId.uuidString,
                 normalizedDate as NSDate,
-                calendar.date(byAdding: .day, value: 1, to: normalizedDate)! as NSDate
+                nextDay as NSDate
             )
             
             if let existingRecords = try? self.context.fetch(fetchRequest),
@@ -76,11 +80,15 @@ final class TrackerRecordStore: NSObject {
             let calendar = Calendar.current
             let normalizedDate = calendar.startOfDay(for: record.date)
             
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: normalizedDate) else {
+                return
+            }
+            
             fetchRequest.predicate = NSPredicate(
                 format: "trackerId == %@ AND date >= %@ AND date < %@",
                 record.trackerId.uuidString,
                 normalizedDate as NSDate,
-                calendar.date(byAdding: .day, value: 1, to: normalizedDate)! as NSDate
+                nextDay as NSDate
             )
             
             if let records = try? self.context.fetch(fetchRequest) {

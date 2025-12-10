@@ -657,13 +657,17 @@ extension CreateHabitScreen: UICollectionViewDataSource {
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         if collectionView == emojiCollectionView {
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: EmojiCollectionViewCell.identifier, for: indexPath) as! EmojiCollectionViewCell
+            guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: EmojiCollectionViewCell.identifier, for: indexPath) as? EmojiCollectionViewCell else {
+                return UICollectionViewCell()
+            }
             let emoji = emojis[indexPath.item]
             let isSelected = emoji == selectedEmoji
             cell.configure(with: emoji, isSelected: isSelected)
             return cell
         } else if collectionView == colorCollectionView {
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ColorCollectionViewCell.identifier, for: indexPath) as! ColorCollectionViewCell
+            guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ColorCollectionViewCell.identifier, for: indexPath) as? ColorCollectionViewCell else {
+                return UICollectionViewCell()
+            }
             let color = colors[indexPath.item]
             let isSelected = indexPath.item == selectedColorIndex
             cell.configure(with: color, isSelected: isSelected)
