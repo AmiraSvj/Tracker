@@ -90,6 +90,11 @@ final class TrackersViewController: UIViewController {
         return datePicker.date
     }
     
+    // MARK: - Core Data Stores
+    
+    private let categoryStore = TrackerCategoryStore()
+    private let recordStore = TrackerRecordStore()
+    
     
     // MARK: - Lifecycle
     
@@ -97,23 +102,13 @@ final class TrackersViewController: UIViewController {
         super.viewDidLoad()
         configureUI()
         configureNavigationBar()
+        
+        // Настраиваем delegate для автоматического обновления при изменениях в Core Data
+        categoryStore.delegate = self
+        
         loadData()
         refreshData()
         togglePlaceholderVisibility()
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(saveData),
-            name: UIApplication.willResignActiveNotification,
-            object: nil
-        )
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(saveData),
-            name: UIApplication.didEnterBackgroundNotification,
-            object: nil
-        )
     }
     
     deinit {
@@ -187,6 +182,10 @@ final class TrackersViewController: UIViewController {
     }
     
     private func refreshData() {
+        // Перезагружаем данные из Core Data
+        categories = categoryStore.fetchCategories()
+        completedTrackers = recordStore.fetchRecords()
+        
         let selectedDate = datePicker.date
         let calendarWeekday = calendar.component(.weekday, from: selectedDate)
         // Calendar.weekday: Sunday=1, Monday=2, ..., Saturday=7
@@ -245,8 +244,8 @@ final class TrackersViewController: UIViewController {
         guard normalizedSelectedDate <= normalizedToday else { return }
         
         let record = TrackerRecord(trackerId: trackerId, date: normalizedSelectedDate)
+        recordStore.addRecord(record)
         completedTrackers.insert(record)
-        saveData()
         
         print("✅ Completed trackers count: \(completedTrackers.count)")
         print("✅ For tracker \(trackerId): \(completedTrackers.filter { $0.trackerId == trackerId }.count) records")
@@ -260,8 +259,10 @@ final class TrackersViewController: UIViewController {
         let calendar = Calendar.current
         let selectedDate = datePicker.date
         let normalizedSelectedDate = calendar.startOfDay(for: selectedDate)
-        completedTrackers.remove(TrackerRecord(trackerId: trackerId, date: normalizedSelectedDate))
-        saveData()
+        
+        let record = TrackerRecord(trackerId: trackerId, date: normalizedSelectedDate)
+        recordStore.deleteRecord(record)
+        completedTrackers.remove(record)
         
         if let indexPath = findIndexPathForTracker(with: trackerId) {
             collectionView.reloadItems(at: [indexPath])
@@ -282,34 +283,23 @@ final class TrackersViewController: UIViewController {
     // MARK: - Data Persistence
     
     private func loadData() {
-        let storage = DataStorageService.shared
-        let savedCategories = storage.loadCategories()
-        let savedCompletedTrackers = storage.loadCompletedTrackers()
+        // Загружаем категории из Core Data
+        categories = categoryStore.fetchCategories()
         
-        if savedCategories.isEmpty {
-            // Если нет сохраненных данных, создаем начальную категорию
-            categories = [
-                TrackerCategory(title: "категория тест", trackers: [])
-            ]
-        } else {
-            // Удаляем трекеры с названиями "О" и "И"
-            categories = savedCategories.map { category in
-                let filteredTrackers = category.trackers.filter { tracker in
-                    tracker.title != "О" && tracker.title != "И"
-                }
-                return TrackerCategory(title: category.title, trackers: filteredTrackers)
-            }
-            // Сохраняем изменения после удаления
-            storage.saveCategories(categories)
+        // Загружаем записи о выполненных трекерах из Core Data
+        completedTrackers = recordStore.fetchRecords()
+        
+        // Если нет категорий, создаем начальную категорию
+        if categories.isEmpty {
+            let initialCategory = TrackerCategory(title: "категория тест", trackers: [])
+            categoryStore.addCategory(initialCategory)
+            categories = [initialCategory]
         }
-        
-        completedTrackers = savedCompletedTrackers
     }
     
-    @objc private func saveData() {
-        let storage = DataStorageService.shared
-        storage.saveCategories(categories)
-        storage.saveCompletedTrackers(completedTrackers)
+    private func saveData() {
+        // Сохранение происходит автоматически через Store классы при изменениях
+        CoreDataManager.shared.saveContext()
     }
 }
 
@@ -412,17 +402,11 @@ extension TrackersViewController: UISearchBarDelegate {
 
 extension TrackersViewController: CreateTrackerViewControllerDelegate {
     func didCreateTracker(_ tracker: Tracker, categoryTitle: String) {
-        var newCategories = categories
-        if let index = newCategories.firstIndex(where: { $0.title == categoryTitle }) {
-            var updatedTrackers = newCategories[index].trackers
-            updatedTrackers.append(tracker)
-            newCategories[index] = TrackerCategory(title: categoryTitle, trackers: updatedTrackers)
-        } else {
-            let newCategory = TrackerCategory(title: categoryTitle, trackers: [tracker])
-            newCategories.append(newCategory)
-        }
-        categories = newCategories
-        saveData()
+        // Добавляем трекер в категорию через Store
+        categoryStore.addTracker(tracker, toCategoryTitle: categoryTitle)
+        
+        // Обновляем локальные данные
+        categories = categoryStore.fetchCategories()
         
         print("📝 Added tracker: \(tracker.title)")
         print("📝 Schedule: \(tracker.schedule.map { $0.displayName })")
@@ -432,6 +416,18 @@ extension TrackersViewController: CreateTrackerViewControllerDelegate {
         refreshData()
         
         dismiss(animated: true)
+    }
+}
+
+// MARK: - TrackerCategoryStoreDelegate
+
+extension TrackersViewController: TrackerCategoryStoreDelegate {
+    func storeDidUpdate() {
+        // Автоматическое обновление при изменениях в Core Data через NSFetchedResultsController
+        DispatchQueue.main.async { [weak self] in
+            self?.categories = self?.categoryStore.fetchCategories() ?? []
+            self?.refreshData()
+        }
     }
 }
 

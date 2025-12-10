@@ -108,12 +108,12 @@ final class TrackerCell: UICollectionViewCell {
     
     private lazy var emojiLabel: UILabel = {
         let label = UILabel()
-        // Font: SF Pro Medium, 16px, text-align: center
-        label.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        // Font: SF Pro Medium, 14px (уменьшенный размер), text-align: center
+        label.font = UIFont.systemFont(ofSize: 14, weight: .medium)
         label.textAlignment = .center
         // Background: #FFFFFF4D, border-radius: 12px (круглый для 24x24)
         label.backgroundColor = UIColor(red: 255/255, green: 255/255, blue: 255/255, alpha: 0.3)
-        label.layer.cornerRadius = 12
+        label.layer.cornerRadius = 12 // Для круглой формы 24x24
         label.clipsToBounds = true
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -230,6 +230,7 @@ final class TrackerCell: UICollectionViewCell {
             colorView.heightAnchor.constraint(equalToConstant: 90),
             
             // ic 24x24: top: 12px, left: 12px
+            // Контейнер эмодзи: 24x24
             emojiLabel.topAnchor.constraint(equalTo: colorView.topAnchor, constant: 12),
             emojiLabel.leadingAnchor.constraint(equalTo: colorView.leadingAnchor, constant: 12),
             emojiLabel.widthAnchor.constraint(equalToConstant: 24),
@@ -272,12 +273,11 @@ final class TrackerCell: UICollectionViewCell {
     
     func configure(with tracker: Tracker, completedDays: Int, isCompletedToday: Bool) {
         trackerId = tracker.identifier
-        // Временно зеленый цвет для Card/Tracker: #33CF69
-        let greenColor = UIColor(red: 51/255, green: 207/255, blue: 105/255, alpha: 1.0)
-        colorView.backgroundColor = greenColor
+        // Используем цвет из трекера для карточки
+        colorView.backgroundColor = tracker.color
         // Card + Quantity management background: #FFFFFF (устанавливается в init)
         
-        // Устанавливаем эмодзи напрямую (эмодзи отображаются правильно без дополнительных настроек)
+        // Устанавливаем эмодзи напрямую (эмодзи отображаются правильно)
         emojiLabel.text = tracker.emoji
         
         // Настройка attributed text для nameLabel с правильным line-height
@@ -303,12 +303,11 @@ final class TrackerCell: UICollectionViewCell {
         ]
         daysLabel.attributedText = NSAttributedString(string: dayString, attributes: attributes)
         
-        updateCompleteButton(isCompletedToday: isCompletedToday, color: greenColor)
+        updateCompleteButton(isCompletedToday: isCompletedToday, color: tracker.color)
     }
     
     func updateCompleteButton(isCompletedToday: Bool, color: UIColor) {
-        // Всегда используем зеленый цвет для кнопки: #33CF69
-        let greenColor = UIColor(red: 51/255, green: 207/255, blue: 105/255, alpha: 1.0)
+        // Используем цвет трекера для кнопки
         
         // Полностью сбрасываем все параметры кнопки перед установкой нового состояния
         completeButton.setImage(nil, for: .normal)
@@ -318,7 +317,7 @@ final class TrackerCell: UICollectionViewCell {
         
         if isCompletedToday {
             // Состояние: выполнено - показываем checkmark
-            // Button background: #33CF69 с opacity 30% (полупрозрачный зеленый)
+            // Button background: цвет трекера с opacity 30% (полупрозрачный)
             plusIconView.isHidden = true
             checkmarkIconView.isHidden = false
             
@@ -328,14 +327,14 @@ final class TrackerCell: UICollectionViewCell {
             checkmarkIconView.image = UIImage(systemName: "checkmark", withConfiguration: config)
             
             completeButton.setImage(nil, for: .normal) // Убираем изображение с кнопки
-            completeButton.backgroundColor = greenColor.withAlphaComponent(0.3)
+            completeButton.backgroundColor = color.withAlphaComponent(0.3)
             completeButton.layer.borderColor = UIColor.clear.cgColor
         } else {
             // Состояние: не выполнено - показываем плюс
-            // Button 34x34: background: #33CF69, plus icon: white (#FFFFFF)
+            // Button 34x34: background: цвет трекера, plus icon: white (#FFFFFF)
             plusIconView.isHidden = false
             checkmarkIconView.isHidden = true
-            completeButton.backgroundColor = greenColor
+            completeButton.backgroundColor = color
             completeButton.tintColor = .white
             
             // Обновляем размер иконки при изменении состояния
@@ -343,7 +342,7 @@ final class TrackerCell: UICollectionViewCell {
             let config = UIImage.SymbolConfiguration(pointSize: pointSize, weight: .medium)
             plusIconView.image = UIImage(systemName: "plus", withConfiguration: config)
             
-            // Border невидимый (прозрачный) - зеленая заливка до края
+            // Border невидимый (прозрачный) - заливка до края
             completeButton.layer.borderColor = UIColor.clear.cgColor
         }
     }

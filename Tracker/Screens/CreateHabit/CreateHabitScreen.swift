@@ -7,10 +7,41 @@ final class CreateHabitScreen: UIViewController {
     weak var delegate: CreateTrackerViewControllerDelegate?
     private var selectedCategory: String?
     private var selectedSchedule: [Weekday] = []
+    private var selectedEmoji: String?
+    private var selectedColorIndex: Int?
     
     // Constraints для адаптации позиции таблицы при появлении ошибки
     private var messageHeightConstraint: NSLayoutConstraint?
     private var optionsTopConstraint: NSLayoutConstraint?
+    
+    // MARK: - Data
+    
+    private let emojis = [
+        "🙂", "😻", "🌺", "🐶", "❤️", "😱",
+        "😇", "😡", "🥶", "🤔", "🙌", "🍔",
+        "🥦", "🏓", "🥇", "🎸", "🏝️", "😪"
+    ]
+    
+    private let colors: [UIColor] = [
+        UIColor(red: 253/255, green: 76/255, blue: 73/255, alpha: 1),    // Красный
+        UIColor(red: 255/255, green: 136/255, blue: 30/255, alpha: 1),   // Оранжевый
+        UIColor(red: 0/255, green: 121/255, blue: 255/255, alpha: 1),    // Синий
+        UIColor(red: 52/255, green: 211/255, blue: 103/255, alpha: 1),   // Зеленый
+        UIColor(red: 234/255, green: 0/255, blue: 255/255, alpha: 1),    // Фиолетовый
+        UIColor(red: 255/255, green: 119/255, blue: 255/255, alpha: 1),  // Розовый
+        UIColor(red: 76/255, green: 217/255, blue: 100/255, alpha: 1),   // Светло-зеленый
+        UIColor(red: 90/255, green: 200/255, blue: 250/255, alpha: 1),   // Голубой
+        UIColor(red: 255/255, green: 204/255, blue: 0/255, alpha: 1),    // Желтый
+        UIColor(red: 255/255, green: 149/255, blue: 0/255, alpha: 1),    // Оранжево-желтый
+        UIColor(red: 255/255, green: 45/255, blue: 85/255, alpha: 1),    // Розово-красный
+        UIColor(red: 175/255, green: 82/255, blue: 222/255, alpha: 1),  // Фиолетовый
+        UIColor(red: 255/255, green: 59/255, blue: 48/255, alpha: 1),   // Красный
+        UIColor(red: 255/255, green: 159/255, blue: 10/255, alpha: 1),  // Оранжевый
+        UIColor(red: 0/255, green: 199/255, blue: 190/255, alpha: 1),   // Бирюзовый
+        UIColor(red: 48/255, green: 209/255, blue: 88/255, alpha: 1),  // Зеленый
+        UIColor(red: 64/255, green: 156/255, blue: 255/255, alpha: 1),  // Синий
+        UIColor(red: 191/255, green: 90/255, blue: 242/255, alpha: 1)   // Фиолетовый
+    ]
     
     // MARK: - UI Elements
     
@@ -156,6 +187,78 @@ final class CreateHabitScreen: UIViewController {
     
     private let options = ["Категория", "Расписание"]
     
+    // MARK: - Scroll View
+    
+    private lazy var scrollView: UIScrollView = {
+        let scrollView = UIScrollView()
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.keyboardDismissMode = .interactive
+        return scrollView
+    }()
+    
+    private lazy var contentView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    // MARK: - Emoji and Color Collections
+    
+    private lazy var emojiLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Emoji"
+        label.font = UIFont.systemFont(ofSize: 19, weight: .bold)
+        label.textColor = .black
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private lazy var emojiCollectionView: UICollectionView = {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .vertical
+        layout.minimumInteritemSpacing = 5
+        layout.minimumLineSpacing = 0
+        layout.itemSize = CGSize(width: 52, height: 52)
+        layout.sectionInset = UIEdgeInsets(top: 24, left: 18, bottom: 24, right: 19)
+        
+        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.backgroundColor = .clear
+        collectionView.register(EmojiCollectionViewCell.self, forCellWithReuseIdentifier: EmojiCollectionViewCell.identifier)
+        collectionView.delegate = self
+        collectionView.dataSource = self
+        collectionView.isScrollEnabled = false
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        return collectionView
+    }()
+    
+    private lazy var colorLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Цвет"
+        label.font = UIFont.systemFont(ofSize: 19, weight: .bold)
+        label.textColor = .black
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private lazy var colorCollectionView: UICollectionView = {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .vertical
+        layout.minimumInteritemSpacing = 5
+        layout.minimumLineSpacing = 0
+        layout.itemSize = CGSize(width: 52, height: 52)
+        layout.sectionInset = UIEdgeInsets(top: 24, left: 18, bottom: 24, right: 19)
+        
+        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.backgroundColor = .clear
+        collectionView.register(ColorCollectionViewCell.self, forCellWithReuseIdentifier: ColorCollectionViewCell.identifier)
+        collectionView.delegate = self
+        collectionView.dataSource = self
+        collectionView.isScrollEnabled = false
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        return collectionView
+    }()
+    
     // MARK: - Lifecycle
     
     override func viewDidLoad() {
@@ -183,15 +286,26 @@ final class CreateHabitScreen: UIViewController {
         
         textField.delegate = self
         
-        view.addSubview(nameScreen)
-        view.addSubview(textFieldContainer)
+        // Добавляем ScrollView и contentView
+        view.addSubview(scrollView)
+        scrollView.addSubview(contentView)
+        
+        // Кнопки остаются в view (зафиксированы внизу)
+        view.addSubview(cancelButton)
+        view.addSubview(createButton)
+        
+        // Весь контент добавляется в contentView
+        contentView.addSubview(nameScreen)
+        contentView.addSubview(textFieldContainer)
         textFieldContainer.addSubview(textField)
         textFieldContainer.addSubview(placeholderLabel)
         textFieldContainer.addSubview(clearTextButton)
         textFieldContainer.addSubview(errorLabel)
-        view.addSubview(optionsTableView)
-        view.addSubview(cancelButton)
-        view.addSubview(createButton)
+        contentView.addSubview(optionsTableView)
+        contentView.addSubview(emojiLabel)
+        contentView.addSubview(emojiCollectionView)
+        contentView.addSubview(colorLabel)
+        contentView.addSubview(colorCollectionView)
         
         optionsTableView.delegate = self
         optionsTableView.dataSource = self
@@ -222,15 +336,27 @@ final class CreateHabitScreen: UIViewController {
         optionsTopConstraint?.isActive = true
         
         NSLayoutConstraint.activate([
+            // ScrollView занимает пространство между верхом и кнопками
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: cancelButton.topAnchor, constant: -16),
             
-            nameScreen.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            nameScreen.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 27),
+            // contentView внутри ScrollView
+            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+            
+            nameScreen.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            nameScreen.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 27),
             nameScreen.heightAnchor.constraint(equalToConstant: 22),
             
             // Контейнер для текстового поля: позиционируется относительно заголовка, высота 75px как в примере
             textFieldContainer.topAnchor.constraint(equalTo: nameScreen.bottomAnchor, constant: 38),
-            textFieldContainer.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            textFieldContainer.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            textFieldContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            textFieldContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             textFieldContainer.heightAnchor.constraint(equalToConstant: 75),
             
             // UITextView занимает всю высоту контейнера
@@ -256,9 +382,32 @@ final class CreateHabitScreen: UIViewController {
             errorLabel.widthAnchor.constraint(equalToConstant: 286),
             
             // Таблица позиционируется относительно ошибки
-            optionsTableView.leadingAnchor.constraint(equalTo: textFieldContainer.leadingAnchor),
-            optionsTableView.trailingAnchor.constraint(equalTo: textFieldContainer.trailingAnchor),
+            optionsTableView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            optionsTableView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             optionsTableView.heightAnchor.constraint(equalToConstant: 150),
+            
+            // Emoji section
+            emojiLabel.topAnchor.constraint(equalTo: optionsTableView.bottomAnchor, constant: 32),
+            emojiLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 28),
+            emojiLabel.widthAnchor.constraint(equalToConstant: 52),
+            emojiLabel.heightAnchor.constraint(equalToConstant: 18),
+            
+            emojiCollectionView.topAnchor.constraint(equalTo: emojiLabel.bottomAnchor),
+            emojiCollectionView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            emojiCollectionView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            emojiCollectionView.heightAnchor.constraint(equalToConstant: 204),
+            
+            // Color section
+            colorLabel.topAnchor.constraint(equalTo: emojiCollectionView.bottomAnchor, constant: 16),
+            colorLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 28),
+            colorLabel.widthAnchor.constraint(equalToConstant: 52),
+            colorLabel.heightAnchor.constraint(equalToConstant: 18),
+            
+            colorCollectionView.topAnchor.constraint(equalTo: colorLabel.bottomAnchor),
+            colorCollectionView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            colorCollectionView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            colorCollectionView.heightAnchor.constraint(equalToConstant: 204),
+            colorCollectionView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24),
             
             cancelButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             cancelButton.trailingAnchor.constraint(equalTo: view.centerXAnchor, constant: -4),
@@ -276,18 +425,24 @@ final class CreateHabitScreen: UIViewController {
     
     private func createTracker() {
         guard let name = textField.text, !name.isEmpty,
-              let category = selectedCategory,
-              !selectedSchedule.isEmpty else {
+              !selectedSchedule.isEmpty,
+              let emoji = selectedEmoji,
+              let colorIndex = selectedColorIndex else {
             print("Не все поля заполнены")
             return
         }
         
+        // Используем категорию-заглушку по умолчанию, если категория не выбрана
+        let category = selectedCategory ?? "категория тест"
+        
+        let color = colors[colorIndex]
         let newTracker = Tracker(
             identifier: UUID(),
             title: name,
-            color: .systemBlue,
+            color: color,
             schedule: selectedSchedule,
-            emoji: "😪"
+            emoji: emoji,
+            isPinned: false
         )
         delegate?.didCreateTracker(newTracker, categoryTitle: category)
         presentingViewController?.dismiss(animated: true)
@@ -354,10 +509,12 @@ final class CreateHabitScreen: UIViewController {
     
     private func updateCreateButtonState() {
         let isNameEmpty = textField.text?.isEmpty ?? true
-        let isCategorySelected = selectedCategory != nil
         let isScheduleSelected = !selectedSchedule.isEmpty
+        let isEmojiSelected = selectedEmoji != nil
+        let isColorSelected = selectedColorIndex != nil
         
-        let isReadyToCreate = !isNameEmpty && isCategorySelected && isScheduleSelected
+        // Категория больше не обязательна - используется заглушка по умолчанию
+        let isReadyToCreate = !isNameEmpty && isScheduleSelected && isEmojiSelected && isColorSelected
         
         createButton.isEnabled = isReadyToCreate
         createButton.backgroundColor = isReadyToCreate ? .black : .gray
@@ -376,10 +533,8 @@ extension CreateHabitScreen: UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
         switch indexPath.row {
         case 0:
-            let categoryVC = CategoryScreen()
-            categoryVC.delegate = self
-            let navController = UINavigationController(rootViewController: categoryVC)
-            present(navController, animated: true)
+            // Кнопка "Категория" - переход не осуществляется (по требованию чек-листа)
+            break
         case 1:
             let scheduleVC = SheduleScreen()
             scheduleVC.delegate = self
@@ -415,7 +570,9 @@ extension CreateHabitScreen: UITableViewDataSource {
         cell.textLabel?.font = UIFont.systemFont(ofSize: 17)
         cell.textLabel?.textColor = .yBlackDay
         
-        if indexPath.row == 0, let category = selectedCategory {
+        if indexPath.row == 0 {
+            // Показываем выбранную категорию или заглушку по умолчанию
+            let category = selectedCategory ?? "категория тест"
             cell.detailTextLabel?.text = category
             cell.detailTextLabel?.textColor = .gray
             cell.detailTextLabel?.font = UIFont.systemFont(ofSize: 17)
@@ -484,6 +641,52 @@ extension CreateHabitScreen: UITextViewDelegate {
         }
     }
     
+}
+
+// MARK: - UICollectionViewDataSource
+
+extension CreateHabitScreen: UICollectionViewDataSource {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        if collectionView == emojiCollectionView {
+            return emojis.count
+        } else if collectionView == colorCollectionView {
+            return colors.count
+        }
+        return 0
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        if collectionView == emojiCollectionView {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: EmojiCollectionViewCell.identifier, for: indexPath) as! EmojiCollectionViewCell
+            let emoji = emojis[indexPath.item]
+            let isSelected = emoji == selectedEmoji
+            cell.configure(with: emoji, isSelected: isSelected)
+            return cell
+        } else if collectionView == colorCollectionView {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ColorCollectionViewCell.identifier, for: indexPath) as! ColorCollectionViewCell
+            let color = colors[indexPath.item]
+            let isSelected = indexPath.item == selectedColorIndex
+            cell.configure(with: color, isSelected: isSelected)
+            return cell
+        }
+        return UICollectionViewCell()
+    }
+}
+
+// MARK: - UICollectionViewDelegate
+
+extension CreateHabitScreen: UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        if collectionView == emojiCollectionView {
+            selectedEmoji = emojis[indexPath.item]
+            emojiCollectionView.reloadData()
+            updateCreateButtonState()
+        } else if collectionView == colorCollectionView {
+            selectedColorIndex = indexPath.item
+            colorCollectionView.reloadData()
+            updateCreateButtonState()
+        }
+    }
 }
 
 #Preview {

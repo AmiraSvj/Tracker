@@ -83,14 +83,14 @@ class DataStorageService {
                 
                 let schedule = trackerData.schedule.compactMap { Weekday(rawValue: $0) }
                 
-                var tracker = Tracker(
+                let tracker = Tracker(
                     identifier: UUID(uuidString: trackerData.identifier) ?? UUID(),
                     title: trackerData.title,
                     color: color,
                     schedule: schedule,
-                    emoji: trackerData.emoji
+                    emoji: trackerData.emoji,
+                    isPinned: trackerData.isPinned
                 )
-                // isPinned имеет значение по умолчанию false, поэтому не передаем его явно
                 return tracker
             }
             
