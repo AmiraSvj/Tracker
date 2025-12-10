@@ -7,7 +7,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         window = UIWindow()
-        window?.rootViewController = MainTabBarViewController()
+        
+        // Проверяем, был ли пройден онбординг
+        let hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "OnboardingCompleted")
+        
+        if hasCompletedOnboarding {
+            // Если онбординг пройден, показываем основной экран
+            window?.rootViewController = MainTabBarViewController()
+        } else {
+            // Если онбординг не пройден, показываем онбординг
+            window?.rootViewController = OnboardingViewController()
+        }
+        
         window?.makeKeyAndVisible()
         return true
     }

@@ -533,8 +533,11 @@ extension CreateHabitScreen: UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
         switch indexPath.row {
         case 0:
-            // Кнопка "Категория" - переход не осуществляется (по требованию чек-листа)
-            break
+            // Переход на экран выбора категории
+            let categoryVC = CategoryScreen(selectedCategoryTitle: selectedCategory)
+            categoryVC.delegate = self
+            let navController = UINavigationController(rootViewController: categoryVC)
+            present(navController, animated: true)
         case 1:
             let scheduleVC = SheduleScreen()
             scheduleVC.delegate = self

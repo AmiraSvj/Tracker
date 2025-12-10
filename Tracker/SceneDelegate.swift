@@ -16,11 +16,21 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         window = UIWindow(windowScene: windowScene)
         
-        let tabBarController = MainTabBarViewController()
+        guard let window = window else { return }
         
-        guard let window = window else {return}
+        // Проверяем, был ли пройден онбординг
+        let hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "OnboardingCompleted")
         
-        window.rootViewController = tabBarController
+        if hasCompletedOnboarding {
+            // Если онбординг пройден, показываем основной экран
+            let tabBarController = MainTabBarViewController()
+            window.rootViewController = tabBarController
+        } else {
+            // Если онбординг не пройден, показываем онбординг
+            let onboardingViewController = OnboardingViewController()
+            window.rootViewController = onboardingViewController
+        }
+        
         window.makeKeyAndVisible()
     }
 
