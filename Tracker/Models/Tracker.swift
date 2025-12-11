@@ -47,3 +47,20 @@ enum Weekday: Int, CaseIterable {
     }
 }
 
+extension Tracker {
+    func isScheduled(for date: Date) -> Bool {
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: date)
+        // Calendar.weekday: Sunday=1, Monday=2, ..., Saturday=7
+        // Weekday enum: Monday=1, Tuesday=2, ..., Sunday=7
+        let filterWeekday: Int
+        if weekday == 1 {
+            filterWeekday = 7 // Sunday
+        } else {
+            filterWeekday = weekday - 1 // Monday=1, Tuesday=2, etc.
+        }
+        
+        return schedule.contains { $0.numericValue == filterWeekday }
+    }
+}
+

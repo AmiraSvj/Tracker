@@ -133,11 +133,22 @@ final class TrackerCell: UICollectionViewCell {
         return label
     }()
     
+    private lazy var pinImageView: UIImageView = {
+        let imageView = UIImageView()
+        let config = UIImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+        imageView.image = UIImage(systemName: "pin.fill", withConfiguration: config)
+        imageView.tintColor = .white
+        imageView.contentMode = .scaleAspectFit
+        imageView.isHidden = true
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
+    
     private lazy var daysLabel: UILabel = {
         let label = UILabel()
-        // Font: SF Pro Medium, 12px, line-height: 18px, color: #1A1B22
+        // Font: SF Pro Medium, 12px, line-height: 18px, color: #1A1B22 (адаптивный)
         label.font = UIFont.systemFont(ofSize: 12, weight: .medium)
-        label.textColor = UIColor(red: 26/255, green: 27/255, blue: 34/255, alpha: 1.0)
+        label.textColor = UIColor(named: "yBlackDay") ?? .label
         // Настройка line-height
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.minimumLineHeight = 18
@@ -192,14 +203,16 @@ final class TrackerCell: UICollectionViewCell {
     // MARK: - Properties
     
     var onCompleteButtonTapped: (() -> Void)?
+    var onLongPress: ((Tracker) -> Void)?
     private var trackerId: UUID?
+    private var tracker: Tracker?
     
     // MARK: - Initialization
     
     override init(frame: CGRect) {
         super.init(frame: frame)
-        // Card + Quantity management: background: #FFFFFF
-        contentView.backgroundColor = .white
+        // Card + Quantity management: background: #FFFFFF (адаптивный)
+        contentView.backgroundColor = UIColor.systemBackground
         setupUI()
     }
     
@@ -213,10 +226,16 @@ final class TrackerCell: UICollectionViewCell {
         contentView.addSubview(colorView)
         colorView.addSubview(emojiLabel)
         colorView.addSubview(nameLabel)
+        colorView.addSubview(pinImageView)
         contentView.addSubview(daysLabel)
         contentView.addSubview(completeButton)
         completeButton.addSubview(plusIconView)
         completeButton.addSubview(checkmarkIconView)
+        
+        // Добавляем long press gesture
+        let longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress))
+        longPressGesture.minimumPressDuration = 0.5
+        contentView.addGestureRecognizer(longPressGesture)
         
         setupConstraints()
     }
@@ -238,8 +257,14 @@ final class TrackerCell: UICollectionViewCell {
             
             // Text: width: 143, top: 44px, left: 12px (bottom: 90 - 44 - 12 = 34px от низа, но используем bottom)
             nameLabel.leadingAnchor.constraint(equalTo: colorView.leadingAnchor, constant: 12),
-            nameLabel.trailingAnchor.constraint(equalTo: colorView.trailingAnchor, constant: -12),
+            nameLabel.trailingAnchor.constraint(equalTo: colorView.trailingAnchor, constant: -28), // Оставляем место для иконки заклепки
             nameLabel.bottomAnchor.constraint(equalTo: colorView.bottomAnchor, constant: -12),
+            
+            // Pin icon: 24x24, top: 12px, trailing: 12px
+            pinImageView.topAnchor.constraint(equalTo: colorView.topAnchor, constant: 12),
+            pinImageView.trailingAnchor.constraint(equalTo: colorView.trailingAnchor, constant: -12),
+            pinImageView.widthAnchor.constraint(equalToConstant: 24),
+            pinImageView.heightAnchor.constraint(equalToConstant: 24),
             
             // Quantity management text: width: 101, height: 18, top: 16px (от colorView.bottom), left: 12px
             daysLabel.topAnchor.constraint(equalTo: colorView.bottomAnchor, constant: 16),
@@ -272,9 +297,13 @@ final class TrackerCell: UICollectionViewCell {
     // MARK: - Public Methods
     
     func configure(with tracker: Tracker, completedDays: Int, isCompletedToday: Bool) {
+        self.tracker = tracker
         trackerId = tracker.identifier
         // Используем цвет из трекера для карточки
         colorView.backgroundColor = tracker.color
+        
+        // Показываем иконку заклепки, если трекер закреплен
+        pinImageView.isHidden = !tracker.isPinned
         // Card + Quantity management background: #FFFFFF (устанавливается в init)
         
         // Устанавливаем эмодзи напрямую (эмодзи отображаются правильно)
@@ -298,7 +327,7 @@ final class TrackerCell: UICollectionViewCell {
         paragraphStyle.maximumLineHeight = 18
         let attributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 12, weight: .medium),
-            .foregroundColor: UIColor(red: 26/255, green: 27/255, blue: 34/255, alpha: 1.0),
+            .foregroundColor: UIColor(named: "yBlackDay") ?? .label,
             .paragraphStyle: paragraphStyle
         ]
         daysLabel.attributedText = NSAttributedString(string: dayString, attributes: attributes)
@@ -348,15 +377,41 @@ final class TrackerCell: UICollectionViewCell {
     }
     
     private func formatDays(count: Int) -> String {
-        let remainder10 = count % 10
-        let remainder100 = count % 100
+        // Используем локализованное форматирование с учетом плюрализации
+        let formatString: String
         
-        if remainder10 == 1 && remainder100 != 11 {
-            return "\(count) день"
-        } else if remainder10 >= 2 && remainder10 <= 4 && (remainder100 < 10 || remainder100 >= 20) {
-            return "\(count) дня"
+        // Для английского языка: 1 day, остальное days
+        // Для русского языка: 1 день, 2-4 дня, 5+ дней
+        let languageCode = Locale.current.languageCode ?? "en"
+        
+        if languageCode == "ru" {
+            let remainder10 = count % 10
+            let remainder100 = count % 100
+            
+            if remainder10 == 1 && remainder100 != 11 {
+                formatString = NSLocalizedString("day", comment: "Singular day")
+            } else if remainder10 >= 2 && remainder10 <= 4 && (remainder100 < 10 || remainder100 >= 20) {
+                formatString = NSLocalizedString("day_plural", comment: "Plural day (2-4)")
+            } else {
+                formatString = NSLocalizedString("days", comment: "Plural days (5+)")
+            }
         } else {
-            return "\(count) дней"
+            // Английский и другие языки: простая плюрализация
+            if count == 1 {
+                formatString = NSLocalizedString("day", comment: "Singular day")
+            } else {
+                formatString = NSLocalizedString("days", comment: "Plural days")
+            }
+        }
+        
+        return "\(count) \(formatString)"
+    }
+    
+    // MARK: - Actions
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        if gesture.state == .began {
+            guard let tracker = tracker else { return }
+            onLongPress?(tracker)
         }
     }
 }

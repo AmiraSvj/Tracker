@@ -1,0 +1,38 @@
+/* Main Screen */
+"Trackers" = "Трекеры";
+"Filters" = "Фильтры";
+"Statistics" = "Статистика";
+
+/* Placeholders */
+"What will we track?" = "Что будем отслеживать?";
+"Nothing found" = "Ничего не найдено";
+"Search" = "Поиск";
+
+/* Days */
+"day" = "день";
+"days" = "дней";
+"day_plural" = "дня";
+
+/* Filters */
+"All trackers" = "Все трекеры";
+"Trackers for today" = "Трекеры на сегодня";
+"Completed" = "Завершенные";
+"Incomplete" = "Не завершенные";
+
+/* Context Menu */
+"Pin" = "Закрепить";
+"Unpin" = "Открепить";
+"Edit" = "Редактировать";
+"Delete" = "Удалить";
+
+/* Delete Alert */
+"Are you sure you want to delete the tracker?" = "Уверены, что хотите удалить трекер?";
+"Delete" = "Удалить";
+"Cancel" = "Отмена";
+
+/* Statistics */
+"Nothing to analyze yet" = "Анализировать пока нечего";
+"Best period" = "Лучший период";
+"Ideal days" = "Идеальные дни";
+"Trackers completed" = "Трекеров завершено";
+"Average value" = "Среднее значение";
