@@ -15,7 +15,7 @@ final class MainTabBarViewController: UITabBarController {
     private func configureTabBarAppearance() {
         tabBar.tintColor = .systemBlue
         tabBar.unselectedItemTintColor = .gray
-        tabBar.backgroundColor = .white
+        tabBar.backgroundColor = UIColor.systemBackground
         tabBar.backgroundImage = UIImage()
         tabBar.shadowImage = UIImage()
         tabBar.isTranslucent = false
@@ -33,13 +33,13 @@ final class MainTabBarViewController: UITabBarController {
         let statisticsImage = UIImage(resource: .rabbitItem).withRenderingMode(.alwaysTemplate)
         
         trackersVC.tabBarItem = UITabBarItem(
-            title: "Трекеры",
+            title: NSLocalizedString("Trackers", comment: "Trackers tab"),
             image: trackersImage,
             selectedImage: nil
         )
         
         statisticsVC.tabBarItem = UITabBarItem(
-            title: "Статистика",
+            title: NSLocalizedString("Statistics", comment: "Statistics tab"),
             image: statisticsImage,
             selectedImage: nil
         )

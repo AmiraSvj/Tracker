@@ -1,4 +1,5 @@
 import UIKit
+import YandexMobileMetrica
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -6,6 +7,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Инициализация AppMetrica
+        // Замените "your-api-key-here" на ваш реальный API ключ из AppMetrica
+        if let configuration = YMMYandexMetricaConfiguration(apiKey: "your-api-key-here") {
+            YMMYandexMetrica.activate(with: configuration)
+        }
+        
         window = UIWindow()
         
         // Проверяем, был ли пройден онбординг

@@ -10,5 +10,6 @@ protocol ScheduleSelectionDelegate: AnyObject {
 
 protocol CreateTrackerViewControllerDelegate: AnyObject {
     func didCreateTracker(_ tracker: Tracker, categoryTitle: String)
+    func didUpdateTracker(_ tracker: Tracker, categoryTitle: String)
 }
 

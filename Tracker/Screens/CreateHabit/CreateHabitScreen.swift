@@ -10,6 +10,10 @@ final class CreateHabitScreen: UIViewController {
     private var selectedEmoji: String?
     private var selectedColorIndex: Int?
     
+    // Режим редактирования
+    private var editingTracker: Tracker?
+    private var editingCategoryTitle: String?
+    
     // Constraints для адаптации позиции таблицы при появлении ошибки
     private var messageHeightConstraint: NSLayoutConstraint?
     private var optionsTopConstraint: NSLayoutConstraint?
@@ -55,7 +59,6 @@ final class CreateHabitScreen: UIViewController {
     
     private lazy var nameScreen: UILabel = {
         let label = UILabel()
-        label.text = "Новая привычка"
         label.font = UIFont.systemFont(ofSize: 16, weight: .medium)
         label.textAlignment = .center
         
@@ -69,7 +72,9 @@ final class CreateHabitScreen: UIViewController {
             .font: UIFont.systemFont(ofSize: 16, weight: .medium),
             .paragraphStyle: paragraphStyle
         ]
-        label.attributedText = NSAttributedString(string: "Новая привычка", attributes: attributes)
+        
+        let title = editingTracker != nil ? "Редактирование привычки" : "Новая привычка"
+        label.attributedText = NSAttributedString(string: title, attributes: attributes)
         
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -172,7 +177,8 @@ final class CreateHabitScreen: UIViewController {
     
     private lazy var createButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Создать", for: .normal)
+        let title = editingTracker != nil ? "Сохранить" : "Создать"
+        button.setTitle(title, for: .normal)
         button.backgroundColor = .yGray
         button.setTitleColor(.white, for: .normal)
         button.layer.cornerRadius = 16
@@ -259,13 +265,57 @@ final class CreateHabitScreen: UIViewController {
         return collectionView
     }()
     
+    // MARK: - Initialization
+    
+    init(editingTracker: Tracker? = nil, categoryTitle: String? = nil) {
+        self.editingTracker = editingTracker
+        self.editingCategoryTitle = categoryTitle
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     // MARK: - Lifecycle
     
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        if let tracker = editingTracker {
+            loadTrackerData(tracker)
+            // Обновляем текст кнопки после загрузки данных
+            let title = editingTracker != nil ? "Сохранить" : "Создать"
+            createButton.setTitle(title, for: .normal)
+        }
         updateCreateButtonState()
         updatePlaceholderVisibility()
+    }
+    
+    // MARK: - Private Methods
+    
+    private func loadTrackerData(_ tracker: Tracker) {
+        // Предзаполняем поля данными трекера
+        textField.text = tracker.title
+        selectedSchedule = tracker.schedule
+        selectedEmoji = tracker.emoji
+        selectedCategory = editingCategoryTitle
+        
+        // Находим индекс цвета
+        if let colorIndex = colors.firstIndex(where: { color in
+            var r1: CGFloat = 0, g1: CGFloat = 0, b1: CGFloat = 0, a1: CGFloat = 0
+            var r2: CGFloat = 0, g2: CGFloat = 0, b2: CGFloat = 0, a2: CGFloat = 0
+            color.getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
+            tracker.color.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
+            return abs(r1 - r2) < 0.01 && abs(g1 - g2) < 0.01 && abs(b1 - b2) < 0.01 && abs(a1 - a2) < 0.01
+        }) {
+            selectedColorIndex = colorIndex
+        }
+        
+        // Обновляем UI
+        optionsTableView.reloadData()
+        emojiCollectionView.reloadData()
+        colorCollectionView.reloadData()
     }
     
     override func viewDidLayoutSubviews() {
@@ -432,19 +482,44 @@ final class CreateHabitScreen: UIViewController {
             return
         }
         
-        // Используем категорию-заглушку по умолчанию, если категория не выбрана
-        let category = selectedCategory ?? "категория тест"
+        // Категория должна быть выбрана перед созданием трекера
+        guard let category = selectedCategory else {
+            let alert = UIAlertController(
+                title: "Ошибка",
+                message: "Пожалуйста, выберите категорию",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
         
         let color = colors[colorIndex]
-        let newTracker = Tracker(
-            identifier: UUID(),
-            title: name,
-            color: color,
-            schedule: selectedSchedule,
-            emoji: emoji,
-            isPinned: false
-        )
-        delegate?.didCreateTracker(newTracker, categoryTitle: category)
+        
+        if let editingTracker = editingTracker {
+            // Режим редактирования - обновляем трекер
+            let updatedTracker = Tracker(
+                identifier: editingTracker.identifier,
+                title: name,
+                color: color,
+                schedule: selectedSchedule,
+                emoji: emoji,
+                isPinned: editingTracker.isPinned
+            )
+            delegate?.didUpdateTracker(updatedTracker, categoryTitle: category)
+        } else {
+            // Режим создания - создаем новый трекер
+            let newTracker = Tracker(
+                identifier: UUID(),
+                title: name,
+                color: color,
+                schedule: selectedSchedule,
+                emoji: emoji,
+                isPinned: false
+            )
+            delegate?.didCreateTracker(newTracker, categoryTitle: category)
+        }
+        
         presentingViewController?.dismiss(animated: true)
     }
     
@@ -574,11 +649,14 @@ extension CreateHabitScreen: UITableViewDataSource {
         cell.textLabel?.textColor = .yBlackDay
         
         if indexPath.row == 0 {
-            // Показываем выбранную категорию или заглушку по умолчанию
-            let category = selectedCategory ?? "категория тест"
-            cell.detailTextLabel?.text = category
-            cell.detailTextLabel?.textColor = .gray
-            cell.detailTextLabel?.font = UIFont.systemFont(ofSize: 17)
+            // Показываем выбранную категорию только если она выбрана, иначе только заголовок
+            if let category = selectedCategory {
+                cell.detailTextLabel?.text = category
+                cell.detailTextLabel?.textColor = .gray
+                cell.detailTextLabel?.font = UIFont.systemFont(ofSize: 17)
+            } else {
+                cell.detailTextLabel?.text = nil
+            }
         } else if indexPath.row == 1, !selectedSchedule.isEmpty {
             let scheduleText = formatScheduleText(selectedSchedule)
             cell.detailTextLabel?.text = scheduleText

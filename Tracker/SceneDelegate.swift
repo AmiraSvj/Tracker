@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import YandexMobileMetrica
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
@@ -17,6 +18,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window = UIWindow(windowScene: windowScene)
         
         guard let window = window else { return }
+        
+        // Инициализация AppMetrica для Scene-based приложений
+        // Замените "your-api-key-here" на ваш реальный API ключ из AppMetrica
+        if let configuration = YMMYandexMetricaConfiguration(apiKey: "your-api-key-here") {
+            YMMYandexMetrica.activate(with: configuration)
+        }
         
         // Проверяем, был ли пройден онбординг
         let hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "OnboardingCompleted")

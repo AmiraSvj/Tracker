@@ -1,0 +1,38 @@
+/* Main Screen */
+"Trackers" = "Trackers";
+"Filters" = "Filters";
+"Statistics" = "Statistics";
+
+/* Placeholders */
+"What will we track?" = "What will we track?";
+"Nothing found" = "Nothing found";
+"Search" = "Search";
+
+/* Days */
+"day" = "day";
+"days" = "days";
+"day_plural" = "days";
+
+/* Filters */
+"All trackers" = "All trackers";
+"Trackers for today" = "Trackers for today";
+"Completed" = "Completed";
+"Incomplete" = "Incomplete";
+
+/* Context Menu */
+"Pin" = "Pin";
+"Unpin" = "Unpin";
+"Edit" = "Edit";
+"Delete" = "Delete";
+
+/* Delete Alert */
+"Are you sure you want to delete the tracker?" = "Are you sure you want to delete the tracker?";
+"Delete" = "Delete";
+"Cancel" = "Cancel";
+
+/* Statistics */
+"Nothing to analyze yet" = "Nothing to analyze yet";
+"Best period" = "Best period";
+"Ideal days" = "Ideal days";
+"Trackers completed" = "Trackers completed";
+"Average value" = "Average value";
